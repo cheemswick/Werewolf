@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ma Sói - Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--blood:#8B0000;--blood-b:#C0392B;--moon:#E8D5A3;--moon-d:#A89060;--void:#050507;--surface:#12121A;--surface2:#1A1A26;--surface3:#22222F;--glass:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--green:#27AE60;--text:#E8DDD0;--text-d:#8A8070;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;background:var(--void);color:var(--text);font-family:'Rajdhani',sans-serif;overflow:hidden;}
+.bg{position:fixed;inset:0;z-index:0;transition:background 2s;}
+.bg-night{background:radial-gradient(ellipse 100% 50% at 50% -10%,#0a0015,var(--void) 70%);}
+.bg-day{background:radial-gradient(ellipse 100% 50% at 50% -10%,#1a1200,var(--void) 70%);}
+#app{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,.5);border-bottom:1px solid var(--border);backdrop-filter:blur(10px);flex-shrink:0;}
+.phase-badge{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:100px;padding:6px 14px;}
+.phase-icon{font-size:18px;}
+.phase-text{font-size:13px;font-weight:700;letter-spacing:1px;color:var(--moon);}
+.timer{font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--moon);min-width:40px;text-align:center;}
+.timer.urgent{color:var(--blood-b);animation:pulse .5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.role-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:100px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text);}
+
+/* Main content */
+.content{flex:1;overflow-y:auto;padding:12px 12px 0;}
+
+/* Players grid */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-bottom:12px;}
+.ptile{background:var(--glass);border:2px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.ptile.dead{opacity:.4;filter:grayscale(1);}
+.ptile.me{border-color:rgba(232,213,163,.4);}
+.ptile.wolf-ally{border-color:rgba(192,57,43,.5);}
+.ptile.selected{border-color:var(--blood-b);box-shadow:0 0 12px rgba(192,57,43,.4);}
+.pavatar{font-size:28px;display:block;margin-bottom:4px;}
+.pname{font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pbadges{position:absolute;top:4px;right:4px;display:flex;flex-direction:column;gap:2px;}
+.dead-x{position:absolute;inset:0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);font-size:20px;}
+.vote-cnt{position:absolute;bottom:3px;right:4px;background:var(--blood-b);color:#fff;border-radius:100px;padding:1px 6px;font-size:10px;font-weight:700;}
+
+/* Night overlay */
+.night-ov{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+.night-ov.hidden{display:none;}
+.noi{font-size:64px;margin-bottom:16px;animation:float 3s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.not{font-family:'Cinzel Decorative',serif;font-size:clamp(16px,5vw,26px);color:var(--moon);text-align:center;margin-bottom:8px;animation:glow 2s infinite;}
+@keyframes glow{0%,100%{text-shadow:0 0 10px rgba(232,213,163,.3);}50%{text-shadow:0 0 30px rgba(232,213,163,.8);}}
+.now{color:var(--text-d);font-size:14px;text-align:center;margin-top:12px;}
+
+/* Action panel */
+.action-panel{background:var(--surface);border:1px solid rgba(232,213,163,.2);border-radius:14px;padding:16px;margin-bottom:12px;animation:su .3s;}
+@keyframes su{from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.action-title{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--moon);margin-bottom:12px;text-align:center;}
+.atargets{display:flex;flex-direction:column;gap:6px;}
+.atgt{padding:12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;}
+.atgt:active{transform:scale(.97);}
+.atgt.sel{background:rgba(192,57,43,.15);border-color:var(--blood-b);}
+.atgt.sel-save{background:rgba(39,174,96,.15);border-color:var(--green);}
+.aconfirm{width:100%;margin-top:10px;padding:13px;background:linear-gradient(135deg,#6B0000,var(--blood-b));border:none;border-radius:10px;color:#fff;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;}
+.askip{width:100%;margin-top:6px;padding:10px;background:transparent;border:1px solid var(--border);border-radius:10px;color:var(--text-d);font-family:'Rajdhani',sans-serif;font-size:14px;cursor:pointer;}
+
+/* Vote modal (Among Us style) */
+.vote-modal{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.95);display:flex;flex-direction:column;overflow:hidden;}
+.vote-modal.hidden{display:none;}
+.vote-header{padding:16px;text-align:center;border-bottom:1px solid var(--border);flex-shrink:0;}
+.vote-title{font-family:'Cinzel Decorative',serif;font-size:20px;color:var(--moon);}
+.vote-sub{color:var(--text-d);font-size:13px;margin-top:4px;}
+.vote-prog{color:var(--moon-d);font-size:13px;margin-top:6px;}
+.vote-timer{font-family:'Cinzel Decorative',serif;font-size:28px;margin-top:6px;color:var(--moon);}
+.vote-timer.urgent{color:var(--blood-b);animation:pulse .5s infinite;}
+.vgrid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:14px;align-content:start;}
+.vtile{background:var(--surface2);border:2px solid var(--border);border-radius:14px;padding:12px 8px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.vtile:active{transform:scale(.95);}
+.vtile.vsel{border-color:var(--blood-b);background:rgba(192,57,43,.15);}
+.vtile.vdead{opacity:.3;pointer-events:none;}
+.vtile.vskip{border-style:dashed;grid-column:1/-1;}
+.vtile-av{font-size:32px;display:block;margin-bottom:6px;}
+.vtile-name{font-size:12px;font-weight:700;}
+.vtile-cnt{position:absolute;top:-6px;right:-6px;background:var(--blood-b);color:#fff;border-radius:100px;padding:2px 7px;font-size:11px;font-weight:700;min-width:20px;}
+.vtile-voted{font-size:10px;color:var(--green);margin-top:3px;}
+.vfooter{padding:14px;flex-shrink:0;border-top:1px solid var(--border);}
+
+/* Result modal */
+.result-modal{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;}
+.result-modal.hidden{display:none;}
+.result-title{font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--moon);text-align:center;margin-bottom:18px;}
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;width:100%;max-width:360px;margin-bottom:14px;max-height:60vh;overflow-y:auto;}
+.rp-row{display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;background:rgba(255,255,255,.03);border-radius:8px;}
+
+/* Game over */
+.gameover{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.97);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+.gameover.hidden{display:none;}
+.go-icon{font-size:72px;margin-bottom:16px;animation:gpulse 2s infinite;}
+@keyframes gpulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+.go-title{font-family:'Cinzel Decorative',serif;font-size:clamp(20px,6vw,32px);text-align:center;margin-bottom:8px;}
+.go-msg{font-family:'Crimson Pro',serif;font-size:17px;color:var(--text-d);text-align:center;margin-bottom:22px;}
+.go-roles{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;}
+.go-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.go-row:last-child{border-bottom:none;}
+
+/* My role popup */
+.role-popup{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:20px;}
+.role-popup.hidden{display:none;}
+.rp-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;max-width:340px;width:100%;text-align:center;}
+.rp-icon{font-size:56px;margin-bottom:12px;display:block;}
+.rp-name{font-family:'Cinzel Decorative',serif;font-size:20px;color:var(--moon);margin-bottom:8px;}
+.rp-desc{font-family:'Crimson Pro',serif;font-size:15px;color:var(--text-d);line-height:1.7;margin-bottom:14px;}
+.wolf-info{background:rgba(139,0,0,.15);border:1px solid rgba(192,57,43,.3);border-radius:10px;padding:10px;margin-bottom:12px;font-size:13px;line-height:1.6;}
+.lover-info{background:rgba(255,107,157,.1);border:1px solid rgba(255,107,157,.3);border-radius:10px;padding:10px;margin-bottom:12px;font-size:13px;line-height:1.6;}
+
+/* Chat */
+.chat-tabs{display:flex;gap:4px;margin-bottom:8px;}
+.ctab{flex:1;padding:8px;background:var(--glass);border:1px solid var(--border);border-radius:8px;color:var(--text-d);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;}
+.ctab.active{background:var(--surface2);color:var(--moon);}
+.chatbox{height:120px;overflow-y:auto;background:rgba(0,0,0,.3);border-radius:10px;padding:10px;margin-bottom:8px;}
+.cmsg{font-size:13px;line-height:1.5;margin-bottom:4px;}
+.cmsg .csender{color:var(--moon-d);font-weight:700;}
+.cmsg.sys{color:var(--text-d);font-style:italic;}
+.cmsg.ghost{color:#9B59B6;font-style:italic;}
+.cmsg.wolf{color:var(--blood-b);}
+.chat-row{display:flex;gap:8px;padding-bottom:12px;}
+.chat-inp{flex:1;padding:12px 14px;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:15px;outline:none;}
+.chat-inp:focus{border-color:var(--moon-d);}
+.mic-btn{padding:12px 16px;border:1px solid var(--border);border-radius:10px;font-size:16px;cursor:pointer;transition:all .2s;background:var(--surface2);color:var(--text-d);}
+.mic-btn.on{background:var(--blood-b);border-color:var(--blood-b);color:#fff;}
+.mic-btn.off-auto{opacity:.3;cursor:not-allowed;}
+.send-btn{padding:12px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--moon);cursor:pointer;font-size:16px;}
+
+/* Toast */
+.toast{position:fixed;top:68px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:100px;padding:10px 18px;font-size:13px;font-weight:600;z-index:500;white-space:nowrap;animation:ti .3s;max-width:90vw;text-align:center;}
+@keyframes ti{from{opacity:0;transform:translate(-50%,-10px);}to{opacity:1;transform:translate(-50%,0);}}
+.toast.error{border-color:var(--blood-b);color:#ff6b6b;}
+.toast.success{border-color:var(--green);color:#6bff9a;}
+.toast.hidden{display:none;}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px;}
+.hidden{display:none!important;}
+.btn-sm{padding:9px 16px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="bg bg-night" id="bg"></div>
+
+<div id="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="phase-badge">
+      <span class="phase-icon" id="phase-icon">🌙</span>
+      <span class="phase-text" id="phase-text">Đang tải...</span>
+    </div>
+    <div class="timer" id="timer">--</div>
+    <button class="role-btn" onclick="showMyRole()"><span id="my-role-icon">?</span> Role</button>
+  </div>
+
+  <!-- Main scrollable content -->
+  <div class="content" id="content">
+    <div class="pgrid" id="pgrid"></div>
+
+    <!-- Action panel (ẩn mặc định) -->
+    <div class="action-panel hidden" id="action-panel"></div>
+
+    <!-- Chat -->
+    <div class="chat-tabs">
+      <div class="ctab active" id="ctab-main" onclick="switchChat('main')">💬 Làng</div>
+      <div class="ctab hidden" id="ctab-ghost" onclick="switchChat('ghost')">👻 Hồn Ma</div>
+      <div class="ctab hidden" id="ctab-wolf" onclick="switchChat('wolf')">🐺 Sói</div>
+    </div>
+    <div class="chatbox" id="cbox-main"></div>
+    <div class="chatbox hidden" id="cbox-ghost"></div>
+    <div class="chatbox hidden" id="cbox-wolf"></div>
+    <div class="chat-row">
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤</button>
+      <input class="chat-inp" id="chat-inp" placeholder="Nhắn tin..." maxlength="200" autocomplete="off">
+      <button class="send-btn" onclick="sendChat()">➤</button>
+    </div>
+  </div>
+</div>
+
+<!-- Night overlay -->
+<div class="night-ov hidden" id="night-ov">
+  <div class="noi" id="no-icon">🌙</div>
+  <div class="not" id="no-title">Đêm bắt đầu</div>
+  <div class="now" id="no-sub"></div>
+</div>
+
+<!-- Vote modal -->
+<div class="vote-modal hidden" id="vote-modal">
+  <div class="vote-header">
+    <div class="vote-title">⚖️ Bỏ Phiếu Xử Tử</div>
+    <div class="vote-sub" id="vsub">Chọn người bạn muốn treo cổ</div>
+    <div class="vote-prog" id="vprog">0/0 đã vote</div>
+    <div class="vote-timer" id="vtimer">90</div>
+  </div>
+  <div class="vgrid" id="vgrid"></div>
+  <div class="vfooter">
+    <button class="aconfirm" id="vconfirm" onclick="confirmVote()" disabled style="opacity:.5;">Xác Nhận Vote</button>
+  </div>
+</div>
+
+<!-- Vote result -->
+<div class="result-modal hidden" id="vresult-modal">
+  <div class="result-title" id="vr-title">Kết Quả Bỏ Phiếu</div>
+  <div class="result-card" id="vr-card"></div>
+</div>
+
+<!-- Night result -->
+<div class="result-modal hidden" id="nresult-modal">
+  <div class="result-title">🌅 Bình Minh Ló Dạng</div>
+  <div class="result-card" id="nr-card"></div>
+</div>
+
+<!-- Game over -->
+<div class="gameover hidden" id="gameover">
+  <div class="go-icon" id="go-icon">🏆</div>
+  <div class="go-title" id="go-title">Game Over</div>
+  <div class="go-msg" id="go-msg"></div>
+  <div class="go-roles" id="go-roles"></div>
+  <button class="btn-sm" onclick="window.location.href='/'">🏠 Về Trang Chủ</button>
+</div>
+
+<!-- My role popup -->
+<div class="role-popup hidden" id="role-popup">
+  <div class="rp-card">
+    <span class="rp-icon" id="rp-icon"></span>
+    <div class="rp-name" id="rp-name"></div>
+    <div id="rp-wolf" class="wolf-info hidden"></div>
+    <div id="rp-lover" class="lover-info hidden"></div>
+    <p class="rp-desc" id="rp-desc"></p>
+    <button class="btn-sm" style="width:100%;" onclick="hideMyRole()">Đóng</button>
+  </div>
+</div>
+
+<!-- Sheriff election (reuse vote modal) -->
+
+<div class="toast hidden" id="toast"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ═══════════════════════════════════════
+// ROLE DATA
+// ═══════════════════════════════════════
+const RD={villager:{name:'Dân Thường',icon:'👨‍🌾',desc:'Không có kỹ năng. Dùng lý luận tìm Sói.'},werewolf:{name:'Ma Sói',icon:'🐺',desc:'Mỗi đêm cùng bầy chọn người cắn. Hoà phiếu → không ai chết.'},seer:{name:'Tiên Tri',icon:'🔮',desc:'Mỗi đêm soi 1 người. Không soi đêm đầu.'},guard:{name:'Bảo Vệ',icon:'🛡️',desc:'Mỗi đêm bảo vệ 1 người.'},witch:{name:'Phù Thủy',icon:'🧙‍♀️',desc:'1 bình cứu + 1 bình độc.'},hunter:{name:'Thợ Săn',icon:'🏹',desc:'Khi chết kéo 1 người chết theo.'},sheriff:{name:'Cảnh Sát Trưởng',icon:'⭐',desc:'Vote tính 2 phiếu.'},cupid:{name:'Thần Tình Yêu',icon:'💘',desc:'Ghép đôi 2 người đêm đầu.'},wolf_cub:{name:'Sói Con',icon:'🐾',desc:'Không vote đêm. Chết → đêm sau Sói cắn 2.'},half_wolf:{name:'Nửa Người Nửa Sói',icon:'🌙',desc:'Bị cắn → biến thành Sói.'},white_wolf:{name:'Sói Trắng',icon:'🤍',desc:'Mỗi 2 đêm giết 1 Sói khác.'},thief:{name:'Ăn Trộm',icon:'🃏',desc:'Lấy role của người khác đêm đầu.'}};
+const AVA=['🧙','🧛','🧟','🧜','🧝','🧞','🧓','👩‍🦰','👨‍🦱','👩','🧑','👴'];
+const WOLF_ROLES=['werewolf','wolf_cub','white_wolf'];
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let socket,myId;
+let myRole=null,wolfPack=[],loverData=null;
+let isAlive=true,isSheriff=false;
+let gamePlayers={},gamePhase='';
+let selVote=null,selAction=null;
+let witchState={save:false,poison:null};
+let cupidSel=[];
+let timerIv=null,voteIv=null;
+const localTally={};
+
+// ═══════════════════════════════════════
+// CONNECT & SOCKET
+// ═══════════════════════════════════════
+function init(){
+  const room=sessionStorage.getItem('masoi_room');
+  const name=sessionStorage.getItem('masoi_name');
+  if(!room||!name){window.location.href='/';return;}
+
+  socket=io({transports:['websocket','polling'],reconnection:true,reconnectionDelay:1500,reconnectionAttempts:Infinity});
+
+  socket.on('connect',()=>{myId=socket.id;socket.emit('room:join',{code:room,playerName:name});});
+  socket.on('disconnect',()=>toast('Mất kết nối...','error'));
+  socket.on('reconnect',()=>toast('Đã kết nối lại!','success'));
+
+  // Rejoin game state
+  socket.on('game:rejoin',d=>{
+    d.players.forEach(p=>{gamePlayers[p.id]=p;});
+    myRole=d.myRole; isAlive=d.myAlive;
+    if(d.wolfPack) wolfPack=d.wolfPack;
+    if(d.loverId) loverData={loverId:d.loverId};
+    isSheriff=d.isSheriff||false;
+    document.getElementById('my-role-icon').textContent=RD[myRole]?.icon||'?';
+    if(WOLF_ROLES.includes(myRole)) document.getElementById('ctab-wolf').classList.remove('hidden');
+    if(!isAlive){document.getElementById('ctab-ghost').classList.remove('hidden');}
+    renderPlayers();
+    setPhaseUI(d.phase);
+    toast('Đã kết nối lại game!','success');
+  });
+
+  socket.on('game:role_assigned',d=>{
+    myRole=d.role;
+    if(d.wolfPack) wolfPack=d.wolfPack;
+    document.getElementById('my-role-icon').textContent=RD[myRole]?.icon||'?';
+    if(WOLF_ROLES.includes(myRole)) document.getElementById('ctab-wolf').classList.remove('hidden');
+    toast(`Role: ${RD[myRole]?.name||myRole}`,'success');
+  });
+
+  socket.on('game:started',d=>{
+    gamePlayers={};
+    d.players.forEach(p=>{gamePlayers[p.id]=p;});
+    renderPlayers();
+  });
+
+  socket.on('game:night_start',d=>{
+    setPhaseUI('night',true);
+    hideAllModals();
+    sysChat('main',`🌙 Đêm ${d.round} bắt đầu...`);
+  });
+
+  socket.on('game:night_phase',d=>{onNightPhase(d);});
+
+  socket.on('night:thief_action',d=>{showThiefAction(d);});
+  socket.on('night:werewolf_action',d=>{showWolfAction(d);});
+  socket.on('night:guard_action',d=>{showGuardAction(d);});
+  socket.on('night:witch_action',d=>{showWitchAction(d);});
+  socket.on('night:seer_action',d=>{showSeerAction(d);});
+  socket.on('night:cupid_action',d=>{showCupidAction(d);});
+  socket.on('night:white_wolf_action',d=>{showWhiteWolfAction(d);});
+
+  socket.on('night:thief_result',d=>{
+    myRole=d.newRole;
+    document.getElementById('my-role-icon').textContent=RD[myRole]?.icon||'?';
+    if(d.wolfPack){wolfPack=d.wolfPack;document.getElementById('ctab-wolf').classList.remove('hidden');}
+    toast(`Bạn lấy được role: ${RD[myRole]?.name}`,'success');
+    sysChat('main',`Ăn Trộm đã hành động.`);
+  });
+  socket.on('night:thief_victim',d=>{toast(d.message,'error');myRole=d.newRole;document.getElementById('my-role-icon').textContent='👨‍🌾';});
+  socket.on('night:wolf_vote_update',d=>{appendChat('wolf',d.voterName,`chọn tấn công: ${getPN(d.targetId)}`,'wolf');});
+  socket.on('night:seer_result',d=>{const w=d.result==='wolf';toast(`${d.targetName} là ${w?'🐺 MA SÓI!':'✅ Dân thường'}`,w?'error':'success');sysChat('main',`Tiên Tri: ${d.targetName} là ${w?'Ma Sói':'Dân Thường'}`);});
+  socket.on('night:cupid_result',d=>{l
