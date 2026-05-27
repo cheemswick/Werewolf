@@ -611,4 +611,3 @@ class GameLoop {
     this.emit('game:vote_start', {
       players:  this.getPublicPlayers(),
       duration: DURATION.DAY_
-module.exports = { GameLoop };
